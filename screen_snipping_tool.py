@@ -4,9 +4,8 @@ import argparse
 import time
 import PyQt5.Qt
 import logging
-import ctypes
-import ctypes.wintypes
 import win32con
+import hotkey
 
 
 DEFAULT_OUTPUT_FILE_NAME_PATTERN = "ScreenSnippingImages/ScreenSnippingImage_%Y-%m-%d_%H-%M-%S.png"
@@ -16,11 +15,10 @@ APP_VERSION = "1.0.0"
 
 
 def get_screen_image(bounding_box=None):
-    """Get screen image.
+    """ Get screen image.
 
     :param bounding_box: [tuple] The image rectangle in screen, formatted in (left, upper, width, height).
-    :rtype: PyQt5.Qt.QPixmap or None
-    :returns: Screen image.
+    :returns: [PyQt5.Qt.QPixmap or None] Screen image.
     """
 
     screen = PyQt5.Qt.QGuiApplication.primaryScreen()
@@ -35,13 +33,12 @@ def get_screen_image(bounding_box=None):
 
 
 def save_image(image, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, override=False):
-    """Save image.
+    """ Save image.
 
     :param image: [PyQt5.Qt.QPixmap] The image to be saved.
     :param file_name_pattern: [string] The file name pattern (absolute path or relative path to this python script file). For example: "ScreenSnippingImages/ScreenSnippingImage_%Y-%m-%d_%H-%M-%S.png".
     :param override: [bool] Whether to override the output file if it exists before.
-    :rtype: string or None
-    :returns: If the image has been successfully saved, the image file name is returned, else "None" is returned.
+    :returns: [string or None] If the image has been successfully saved, the image file name is returned, else "None" is returned.
     """
 
     file_name = time.strftime(file_name_pattern, time.localtime())
@@ -67,13 +64,12 @@ def save_image(image, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, overri
 
 
 def snip(bounding_box=None, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, override=False, show_time=1000):
-    """Snip screen image and save it to file.
+    """ Snip screen image and save it to file.
 
     :param bounding_box: [tuple] The image rectangle in screen, formatted in (left, upper, width, height).
     :param file_name_pattern: [string] The file name pattern (absolute path or relative path to this python script file). For example: "ScreenSnippingImages/ScreenSnippingImage_%Y-%m-%d_%H-%M-%S.png".
     :param override: [bool] Whether to override the output file if it exists before.
     :param show_time: [int] Milliseconds time to show the screen image (if 0, the image won't be shown).
-    :rtype: None
     """
 
     logging.info("Started snipping screen.")
@@ -117,28 +113,19 @@ def main():
     logging.basicConfig(filename=args.log_file, filemode="a", format="[%(asctime)s] [%(levelname)s] [%(module)s.%(funcName)s] %(message)s", level=logging.DEBUG)
     logging.info(APP_DESCRIPTION + " started.")
 
-    snip_hot_key_id = 101
-    try:
-        ok = ctypes.windll.user32.RegisterHotKey(None, snip_hot_key_id, 1, win32con.VK_SNAPSHOT)
-        if not ok:
-            logging.error("Failed to register hot key for snipping.")
-            return
+    def snip_():
+        snip(None, args.output, args.override, args.show_time)
 
-        msg = ctypes.wintypes.MSG()
-        while True:
-            if ctypes.windll.user32.GetMessageA(ctypes.byref(msg), None, 0, 0):
-                if msg.message == win32con.WM_HOTKEY:
-                    if msg.wParam == snip_hot_key_id:
-                        snip(None, args.output, args.override, args.show_time)
+    hotkey_ = hotkey.Hotkey()
+    hotkey_.register(101, win32con.MOD_ALT, win32con.VK_SNAPSHOT, snip_)
 
-                ctypes.windll.user32.TranslateMessage(ctypes.byref(msg))
-                ctypes.windll.user32.DispatchMessageA(ctypes.byref(msg))
-
-            app.processEvents()
-            time.sleep(0.1)
-    finally:
-        ctypes.windll.user32.UnregisterHotKey(None, snip_hot_key_id)
+    while True:
+        app.processEvents()
+        time.sleep(0.1)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logging.debug("Exception occurred: {}".format(e))

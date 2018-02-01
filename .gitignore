@@ -1,1 +1,7 @@
+# PyCharm
 .idea
+__pycache__
+
+
+# Others
+/ScreenSnippingImages
