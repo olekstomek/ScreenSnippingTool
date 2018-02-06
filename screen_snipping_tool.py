@@ -63,38 +63,60 @@ def save_image(image, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, overri
     return file_name
 
 
-def snip(bounding_box=None, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, override=False, show_time=1000):
+def snip(bounding_box=None, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, override=False, show_time=1000, assign_description=0):
     """ Snip screen image and save it to file.
 
     :param bounding_box: [tuple] The image rectangle in screen, formatted in (left, upper, width, height).
     :param file_name_pattern: [string] The file name pattern (absolute path or relative path to this python script file). For example: "ScreenSnippingImages/ScreenSnippingImage_%Y-%m-%d_%H-%M-%S.png".
     :param override: [bool] Whether to override the output file if it exists before.
     :param show_time: [int] Milliseconds time to show the screen image (if 0, the image won't be shown).
+    :param assign_description: [int] Whether to assign description to the screen image (1 for manually input, 2 for OCR, others for no description).
     """
 
     logging.info("Started snipping screen.")
 
-    screen_image = get_screen_image(bounding_box)
-    file_name = save_image(screen_image, file_name_pattern, override)
+    screen_image = get_screen_image(bounding_box=bounding_box)
+    file_name = save_image(image=screen_image, file_name_pattern=file_name_pattern, override=override)
 
     if file_name:
         logging.info("Screen image has been saved in file: {}".format(file_name))
 
         if show_time > 0:
-            image_window = PyQt5.Qt.QLabel()
-            image_window.setWindowTitle(APP_DESCRIPTION + " " + APP_VERSION)
-            image_window.setWindowFlags(PyQt5.Qt.Qt.WindowStaysOnTopHint)
-            image_window.setFixedSize(640, 360)
-            image_window.setPixmap(screen_image)
-            image_window.setScaledContents(True)
-            image_window_close_timer = PyQt5.Qt.QTimer()
-            image_window_close_timer.singleShot(show_time, image_window.close)
-            image_window.show()
-            image_window.activateWindow()
-            process_events_timer = PyQt5.Qt.QTimer()
-            process_events_timer.start(show_time)
-            while process_events_timer.remainingTime() > 0:
-                PyQt5.Qt.QApplication.processEvents()
+            image_dialog = PyQt5.Qt.QDialog()
+            image_dialog.setWindowTitle(APP_DESCRIPTION + " " + APP_VERSION)
+            image_dialog.setWindowFlags(PyQt5.Qt.Qt.WindowStaysOnTopHint)
+            image_dialog.setFixedSize(640, 360)
+            image_dialog.setContentsMargins(0, 0, 0, 0)
+            image_label = PyQt5.Qt.QLabel()
+            image_dialog_layout = PyQt5.Qt.QGridLayout(image_dialog)
+            image_dialog_layout.setContentsMargins(0, 0, 0, 0)
+            image_dialog_layout.addWidget(image_label)
+            image_label.setPixmap(screen_image)
+            image_label.setScaledContents(True)
+            PyQt5.Qt.QTimer().singleShot(10, image_dialog.activateWindow)
+            PyQt5.Qt.QTimer().singleShot(show_time, image_dialog.close)
+            image_dialog.exec()
+
+            if assign_description == 1:
+                description_input_dialog = PyQt5.Qt.QInputDialog()
+                description_input_dialog.setWindowTitle(APP_DESCRIPTION + " " + APP_VERSION)
+                description_input_dialog.setWindowFlags(PyQt5.Qt.Qt.WindowStaysOnTopHint)
+                description_input_dialog.setFixedSize(400, 200)
+                description_input_dialog.setInputMode(description_input_dialog.TextInput)
+                description_input_dialog.setLabelText("Please input description:")
+                PyQt5.Qt.QTimer().singleShot(10, description_input_dialog.activateWindow)
+                description_input_dialog.exec()
+                description = description_input_dialog.textValue()
+                if description:
+                    description_file_name = file_name + ".txt"
+                    with open(description_file_name, "w") as file:
+                        file.write(description)
+                    logging.info("Assigned a description for screen image file: {}".format(file_name))
+                    logging.debug("Description: {}".format(description))
+            elif assign_description == 2:
+                pass  # TODO OCR is not implemented.
+            else:
+                pass
     else:
         logging.error("Error occurred.")
 
@@ -108,13 +130,14 @@ def main():
     arg_parser.add_argument("-r", "--override", action="store_true", help="Whether to override the output file if it exists before.")
     arg_parser.add_argument("-l", "--log-file", help="The log file name (default: log not saved).", default="")
     arg_parser.add_argument("-s", "--show-time", type=int, help="Milliseconds time to show the screen image (if 0, the image won't be shown) (default: '%(default)s').", default=1000)
+    arg_parser.add_argument("-d", "--assign-description", type=int, help="Whether to assign description to the screen image (1 for manually input, 2 for OCR [NOT IMPLEMENTED], others for no description) (default: '%(default)s').", default=0)
     args = arg_parser.parse_args()
 
     logging.basicConfig(filename=args.log_file, filemode="a", format="[%(asctime)s] [%(levelname)s] [%(module)s.%(funcName)s] %(message)s", level=logging.DEBUG)
     logging.info(APP_DESCRIPTION + " started.")
 
     def snip_():
-        snip(None, args.output, args.override, args.show_time)
+        snip(bounding_box=None, file_name_pattern=args.output, override=args.override, show_time=args.show_time, assign_description=args.assign_description)
 
     hotkey_ = hotkey.Hotkey()
     hotkey_.register(101, win32con.MOD_ALT, win32con.VK_SNAPSHOT, snip_)
