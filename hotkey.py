@@ -1,8 +1,8 @@
 import ctypes
 import ctypes.wintypes
 import win32con
-import PyQt5.Qt
 import logging
+from PySide2.QtCore import Qt, QTimer
 
 
 class Hotkey(object):
@@ -44,9 +44,9 @@ class Hotkey(object):
                 ctypes.windll.user32.TranslateMessage(ctypes.byref(msg))
                 ctypes.windll.user32.DispatchMessageA(ctypes.byref(msg))
 
-        timer = PyQt5.Qt.QTimer()
+        timer = QTimer()
         timer.setInterval(100)
-        timer.timeout.connect(check_message, type=PyQt5.Qt.Qt.QueuedConnection)
+        timer.timeout.connect(check_message, type=Qt.QueuedConnection)
         timer.start()
         self.hotkey_dict[hotkey_id] = {"modifiers": modifiers, "key_code": key_code, "callback": callback, "timer": timer}
         logging.debug("Registered hot key: hotkey_id={hotkey_id}, modifiers={modifiers}, key_code={key_code}.".format(hotkey_id=hotkey_id, modifiers=modifiers, key_code=key_code))

@@ -2,10 +2,12 @@ import os
 import sys
 import argparse
 import time
-import PyQt5.Qt
 import logging
 import win32con
 import hotkey
+from PySide2.QtCore import Qt, QTimer
+from PySide2.QtGui import QGuiApplication, QPixmap
+from PySide2.QtWidgets import QApplication, QDialog, QGridLayout, QInputDialog, QLabel
 
 
 DEFAULT_OUTPUT_FILE_NAME_PATTERN = "ScreenSnippingImages/ScreenSnippingImage_%Y-%m-%d_%H-%M-%S.png"
@@ -18,10 +20,10 @@ def get_screen_image(bounding_box=None):
     """ Get screen image.
 
     :param bounding_box: [tuple] The image rectangle in screen, formatted in (left, upper, width, height).
-    :returns: [PyQt5.Qt.QPixmap or None] Screen image.
+    :returns: [QPixmap or None] Screen image.
     """
 
-    screen = PyQt5.Qt.QGuiApplication.primaryScreen()
+    screen = QGuiApplication.primaryScreen()
     if not screen:
         logging.error("Failed to get 'QScreen' object.")
         return None
@@ -35,7 +37,7 @@ def get_screen_image(bounding_box=None):
 def save_image(image, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, override=False):
     """ Save image.
 
-    :param image: [PyQt5.Qt.QPixmap] The image to be saved.
+    :param image: [QPixmap] The image to be saved.
     :param file_name_pattern: [string] The file name pattern (absolute path or relative path to this python script file). For example: "ScreenSnippingImages/ScreenSnippingImage_%Y-%m-%d_%H-%M-%S.png".
     :param override: [bool] Whether to override the output file if it exists before.
     :returns: [string or None] If the image has been successfully saved, the image file name is returned, else "None" is returned.
@@ -82,29 +84,29 @@ def snip(bounding_box=None, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, 
         logging.info("Screen image has been saved in file: {}".format(file_name))
 
         if show_time > 0:
-            image_dialog = PyQt5.Qt.QDialog()
+            image_dialog = QDialog()
             image_dialog.setWindowTitle(APP_DESCRIPTION + " " + APP_VERSION)
-            image_dialog.setWindowFlags(PyQt5.Qt.Qt.WindowStaysOnTopHint)
+            image_dialog.setWindowFlags(Qt.WindowStaysOnTopHint)
             image_dialog.setFixedSize(640, 360)
             image_dialog.setContentsMargins(0, 0, 0, 0)
-            image_label = PyQt5.Qt.QLabel()
-            image_dialog_layout = PyQt5.Qt.QGridLayout(image_dialog)
+            image_label = QLabel()
+            image_dialog_layout = QGridLayout(image_dialog)
             image_dialog_layout.setContentsMargins(0, 0, 0, 0)
             image_dialog_layout.addWidget(image_label)
             image_label.setPixmap(screen_image)
             image_label.setScaledContents(True)
-            PyQt5.Qt.QTimer().singleShot(10, image_dialog.activateWindow)
-            PyQt5.Qt.QTimer().singleShot(show_time, image_dialog.close)
+            QTimer().singleShot(10, image_dialog.activateWindow)
+            QTimer().singleShot(show_time, image_dialog.close)
             image_dialog.exec()
 
             if assign_description == 1:
-                description_input_dialog = PyQt5.Qt.QInputDialog()
+                description_input_dialog = QInputDialog()
                 description_input_dialog.setWindowTitle(APP_DESCRIPTION + " " + APP_VERSION)
-                description_input_dialog.setWindowFlags(PyQt5.Qt.Qt.WindowStaysOnTopHint)
+                description_input_dialog.setWindowFlags(Qt.WindowStaysOnTopHint)
                 description_input_dialog.setFixedSize(400, 200)
                 description_input_dialog.setInputMode(description_input_dialog.TextInput)
                 description_input_dialog.setLabelText("Please input description:")
-                PyQt5.Qt.QTimer().singleShot(10, description_input_dialog.activateWindow)
+                QTimer().singleShot(10, description_input_dialog.activateWindow)
                 description_input_dialog.exec()
                 description = description_input_dialog.textValue()
                 if description:
@@ -122,7 +124,7 @@ def snip(bounding_box=None, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, 
 
 
 def main():
-    app = PyQt5.Qt.QApplication(sys.argv)
+    app = QApplication(sys.argv)
 
     arg_parser = argparse.ArgumentParser(prog=APP_NAME, description=APP_DESCRIPTION)
     arg_parser.add_argument("-v", "--version", action="version", version="%(prog)s {}".format(APP_VERSION))
@@ -143,12 +145,12 @@ def main():
     hotkey_.register(101, win32con.MOD_ALT, win32con.VK_SNAPSHOT, snip_)
 
     while True:
-        app.processEvents()
-        time.sleep(0.1)
+        try:
+            app.processEvents()
+            time.sleep(0.1)
+        except Exception as e:
+            logging.debug("Exception occurred: {}".format(e))
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        logging.debug("Exception occurred: {}".format(e))
+    main()
