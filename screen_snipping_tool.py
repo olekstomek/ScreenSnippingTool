@@ -14,7 +14,7 @@ import pytesseract
 DEFAULT_OUTPUT_FILE_NAME_PATTERN = "ScreenSnippingImages/ScreenSnippingImage_%Y-%m-%d_%H-%M-%S.png"
 APP_NAME = "ScreenSnippingTool"
 APP_DESCRIPTION = "Screen Snipping Tool"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.3.0"
 
 #fast solution for tesseract is not installed or it's not in your path (for Windows). You can 
 #set up your path on your system
