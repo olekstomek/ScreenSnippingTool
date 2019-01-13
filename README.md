@@ -26,7 +26,7 @@ optional arguments:
                         image won't be shown) (default: '1000').
   -d ASSIGN_DESCRIPTION, --assign-description ASSIGN_DESCRIPTION
                         Whether to assign description to the screen image (1
-                        for manually input, 2 for OCR [NOT IMPLEMENTED],
+                        for manually input, 2 for OCR,
                         others for no description) (default: '0').
   -b [BOUNDING_BOX [BOUNDING_BOX ...]], --bounding_box [BOUNDING_BOX [BOUNDING_BOX ...]]
                         [tuple] The image rectangle in screen, enter
