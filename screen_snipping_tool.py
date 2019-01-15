@@ -8,15 +8,19 @@ import hotkey
 from PySide2.QtCore import Qt, QTimer
 from PySide2.QtGui import QGuiApplication, QPixmap
 from PySide2.QtWidgets import QApplication, QDialog, QGridLayout, QInputDialog, QLabel
-
+from PIL import Image
+import pytesseract
 
 DEFAULT_OUTPUT_FILE_NAME_PATTERN = "ScreenSnippingImages/ScreenSnippingImage_%Y-%m-%d_%H-%M-%S.png"
 APP_NAME = "ScreenSnippingTool"
 APP_DESCRIPTION = "Screen Snipping Tool"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.3.0"
 
+#fast solution for tesseract is not installed or it's not in your path (for Windows). You can 
+#set up your path on your system
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files (x86)\Tesseract-OCR\tesseract'
 
-def get_screen_image(bounding_box=None):
+def get_screen_image(bounding_box):
     """ Get screen image.
 
     :param bounding_box: [tuple] The image rectangle in screen, formatted in (left, upper, width, height).
@@ -65,7 +69,7 @@ def save_image(image, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, overri
     return file_name
 
 
-def snip(bounding_box=None, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, override=False, show_time=1000, assign_description=0):
+def snip(bounding_box, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, override=False, show_time=1000, assign_description=0):
     """ Snip screen image and save it to file.
 
     :param bounding_box: [tuple] The image rectangle in screen, formatted in (left, upper, width, height).
@@ -116,7 +120,11 @@ def snip(bounding_box=None, file_name_pattern=DEFAULT_OUTPUT_FILE_NAME_PATTERN, 
                     logging.info("Assigned a description for screen image file: {}".format(file_name))
                     logging.debug("Description: {}".format(description))
             elif assign_description == 2:
-                pass  # TODO OCR is not implemented.
+                textFromImage = pytesseract.image_to_string(Image.open(file_name))
+                description_file_name = file_name + "-OCR.txt"
+                with open(description_file_name, "w") as file:
+                    file.write(textFromImage)
+                os.startfile(description_file_name)
             else:
                 pass
     else:
@@ -133,13 +141,18 @@ def main():
     arg_parser.add_argument("-l", "--log-file", help="The log file name (default: log not saved).", default="")
     arg_parser.add_argument("-s", "--show-time", type=int, help="Milliseconds time to show the screen image (if 0, the image won't be shown) (default: '%(default)s').", default=1000)
     arg_parser.add_argument("-d", "--assign-description", type=int, help="Whether to assign description to the screen image (1 for manually input, 2 for OCR [NOT IMPLEMENTED], others for no description) (default: '%(default)s').", default=0)
+    arg_parser.add_argument("-b", "--bounding_box", nargs='*', type=int, help = "[tuple] The image rectangle in screen, enter dimensions by entering numbers e.g -b 150 200 300 400")
     args = arg_parser.parse_args()
 
     logging.basicConfig(filename=args.log_file, filemode="a", format="[%(asctime)s] [%(levelname)s] [%(module)s.%(funcName)s] %(message)s", level=logging.DEBUG)
     logging.info(APP_DESCRIPTION + " started.")
 
     def snip_():
-        snip(bounding_box=None, file_name_pattern=args.output, override=args.override, show_time=args.show_time, assign_description=args.assign_description)
+        if args.bounding_box:
+            bounding_box = tuple(args.bounding_box)
+        else:
+            bounding_box = None
+        snip(bounding_box, file_name_pattern=args.output, override=args.override, show_time=args.show_time, assign_description=args.assign_description)
 
     hotkey_ = hotkey.Hotkey()
     hotkey_.register(101, win32con.MOD_ALT, win32con.VK_SNAPSHOT, snip_)
@@ -150,7 +163,6 @@ def main():
             time.sleep(0.1)
         except Exception as e:
             logging.debug("Exception occurred: {}".format(e))
-
 
 if __name__ == "__main__":
     main()
