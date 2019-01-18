@@ -32,3 +32,6 @@ optional arguments:
                         [tuple] The image rectangle in screen, enter
                         dimensions by entering numbers e.g -b 150 200 300 400
 ```
+
+#### Fast solution for tesseract is not installed or it's not in your path. You can set up your path on your system (for Windows):
+``` pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files (x86)\Tesseract-OCR\tesseract' ```
